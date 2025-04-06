@@ -10,7 +10,7 @@ import ru.efimkin.bredik.orderservice.dto.CartItemDto;
 
 import java.util.List;
 
-@FeignClient(name = "cart_service")
+@FeignClient(name = "cart-service")
 public interface CartClient {
     @GetMapping("/cart/{userId}")
     List<CartItemDto> getAllItems(@PathVariable Long userId);

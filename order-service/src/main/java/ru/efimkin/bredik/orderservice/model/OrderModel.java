@@ -7,7 +7,7 @@ import ru.efimkin.bredik.orderservice.enums.OrderStatus;
 import java.time.LocalDateTime;
 
 @Entity
-@Table (name = "order")
+@Table (name = "orders")
 @Getter
 @Setter
 @AllArgsConstructor
