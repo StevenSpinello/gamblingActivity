@@ -2,6 +2,7 @@ package ru.efimkin.bredik.orderservice.service;
 
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 import ru.efimkin.bredik.orderservice.client.CartClient;
 import ru.efimkin.bredik.orderservice.dto.CartItemDto;
 import ru.efimkin.bredik.orderservice.enums.OrderStatus;
@@ -23,24 +24,26 @@ public class OrderService {
     }
 
     @Transactional
-    public List<OrderModel> createOrder(Long userId) {
-        List<CartItemDto> cartItems = cartClient.getAllItems(userId);
+    public Mono<List<OrderModel>> createOrder(Long userId) {
+        return cartClient.getAllItems(userId)
+                .collectList()
+                .flatMap(cartItems -> {
+                    if (cartItems.isEmpty()) {
+                        return Mono.error(new IllegalStateException("Cart is empty"));
+                    }
+                    List<OrderModel> orders = cartItems.stream()
+                            .map(cartItem -> OrderModel.builder()
+                                    .userId(userId)
+                                    .productId(cartItem.getProductId())
+                                    .quantity(cartItem.getQuantity())
+                                    .orderDate(LocalDateTime.now())
+                                    .status(OrderStatus.PENDING)
+                                    .build())
+                            .collect(Collectors.toList());
 
-        if (cartItems.isEmpty()) {
-            throw new IllegalStateException("Cart is empty");
-        }
-        List<OrderModel> orders = cartItems.stream()
-                .map(cartItem -> OrderModel.builder()
-                        .userId(userId)
-                        .productId(cartItem.getProductId())
-                        .quantity(cartItem.getQuantity())
-                        .orderDate(LocalDateTime.now())
-                        .status(OrderStatus.PENDING)
-                        .build())
-                .collect(Collectors.toList());
-
-        List<OrderModel> savedOrders = orderRepository.saveAll(orders);
-        cartClient.deleteAllItems(userId);
-        return savedOrders;
+                    return Mono.just(orderRepository.saveAll(orders));  // async save if needed
+                })
+                .flatMap(savedOrders -> cartClient.deleteAllItems(userId).thenReturn(savedOrders));
     }
 }
+

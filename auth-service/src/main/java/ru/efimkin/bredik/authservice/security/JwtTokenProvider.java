@@ -1,71 +1,93 @@
 package ru.efimkin.bredik.authservice.security;
 
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-
+import ru.efimkin.bredik.authservice.dto.JwtAuthDto;
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 
 @Component
-@Slf4j
 public class JwtTokenProvider {
 
-    private final SecretKey key;
-    private final long jwtExpirationMs;
+    private static final Logger LOGGER = LogManager.getLogger(JwtTokenProvider.class);
+    @Value("${jwt.secret}") String jwtSecret;
 
-    public JwtTokenProvider(@Value("${jwt.secret}") String jwtSecret,
-                            @Value("${jwt.expiration}") long jwtExpirationMs) {
-        if (jwtSecret.length() < 32) {
-            throw new IllegalArgumentException("JWT secret key must be at least 32 characters long");
-        }
-        this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-        this.jwtExpirationMs = jwtExpirationMs;
+
+    public JwtAuthDto generateAuthToken(String email) {
+        JwtAuthDto jwtDto = new JwtAuthDto();
+        jwtDto.setToken(generateToken(email));
+        jwtDto.setRefreshToken(generateRefreshToken(email));
+        return jwtDto;
+
     }
 
-    public String extractToken(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7); // Убираем "Bearer "
-        }
-        return null;
+    public JwtAuthDto refreshBaseToken(String email, String refreshToken) {
+        JwtAuthDto jwtDto = new JwtAuthDto();
+        jwtDto.setToken(generateToken(email));
+        jwtDto.setRefreshToken(refreshToken);
+        return jwtDto;
     }
 
-    public String generateToken(String username) {
+    public String getEmailFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSingInKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        return claims.getSubject();
+    }
+
+    private String generateToken(String email) {
+        Date date = Date.from(LocalDateTime.now().plusMinutes(1).atZone(ZoneId.systemDefault()).toInstant());
         return Jwts.builder()
-                .subject(username)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(key)
+                .subject(email)
+                .expiration(date)
+                .signWith(getSingInKey())
+                .compact();
+
+    }
+
+    private String generateRefreshToken(String email) {
+        Date date = Date.from(LocalDateTime.now().plusDays(1).atZone(ZoneId.systemDefault()).toInstant());
+        return Jwts.builder()
+                .subject(email)
+                .expiration(date)
+                .signWith(getSingInKey())
                 .compact();
     }
 
-    public String getUsernameFromToken(String token) {
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+    public boolean validateJwtToken(String token) {
+        try {
+            Jwts.parser()
+                    .verifyWith(getSingInKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return true;
+        }catch (ExpiredJwtException expEx){
+            LOGGER.error("Expired JwtException", expEx);
+        }catch (UnsupportedJwtException expEx){
+            LOGGER.error("Unsupported JwtException", expEx);
+        }catch (MalformedJwtException expEx){
+            LOGGER.error("Malformed JwtException", expEx);
+        }catch (SecurityException expEx){
+            LOGGER.error("Security Exception", expEx);
+        }catch (Exception expEx){
+            LOGGER.error("invalid token", expEx);
+        }
+        return false;
     }
 
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
-            return true;
-        } catch (JwtException e) {
-            return false;
-        }
+    private SecretKey getSingInKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
-    public Authentication getAuthentication(UserDetails userDetails) {
-        return new UsernamePasswordAuthenticationToken(
-                userDetails, null, userDetails.getAuthorities());
-    }
+
 }

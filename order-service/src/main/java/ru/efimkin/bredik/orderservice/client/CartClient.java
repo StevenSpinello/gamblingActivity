@@ -6,15 +6,32 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import ru.efimkin.bredik.orderservice.dto.CartItemDto;
 
 import java.util.List;
 
-@FeignClient(name = "cart-service")
-public interface CartClient {
-    @GetMapping("/cart/{userId}")
-    List<CartItemDto> getAllItems(@PathVariable Long userId);
+@Component
+public class CartClient {
+    private final WebClient webClient;
 
-    @DeleteMapping("/cart/clear/{userId}")
-    void deleteAllItems(@PathVariable Long userId);
+    public CartClient(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("http://cart-service").build();
+    }
+
+    public Flux<CartItemDto> getAllItems(Long userId) {
+        return webClient.get()
+                .uri("/cart/{userId}", userId)
+                .retrieve()
+                .bodyToFlux(CartItemDto.class);
+    }
+
+    public Mono<Void> deleteAllItems(Long userId) {
+        return webClient.delete()
+                .uri("/cart/clear/{userId}", userId)
+                .retrieve()
+                .bodyToMono(Void.class);
+    }
 }
+
