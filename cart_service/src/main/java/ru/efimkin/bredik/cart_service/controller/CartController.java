@@ -2,6 +2,7 @@ package ru.efimkin.bredik.cart_service.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 import ru.efimkin.bredik.cart_service.model.CartModel;
 import ru.efimkin.bredik.cart_service.service.CartService;
 
@@ -22,8 +23,11 @@ public class CartController {
     }
 
     @PostMapping
-    public ResponseEntity<CartModel> addCart(@RequestBody CartModel cart) {
-        return ResponseEntity.ok(cartService.addItem(cart));
+    public Mono<ResponseEntity<CartModel>> addCart(@RequestBody CartModel cart) {
+
+        return cartService.addItem(cart)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.badRequest().build());
     }
 
     @PutMapping("/{id}")
