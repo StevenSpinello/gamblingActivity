@@ -27,6 +27,7 @@ public class SecurityConfig {
                         .anyExchange().permitAll()
                 )
                 .addFilterAt(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION)
+                .anonymous(anonymous -> anonymous.principal("anonymousUser"))
                 .build();
     }
 

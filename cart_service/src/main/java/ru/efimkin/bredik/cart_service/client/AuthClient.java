@@ -3,7 +3,7 @@ package ru.efimkin.bredik.cart_service.client;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-import ru.efimkin.bredik.authservice.dto.UserDto;
+import ru.efimkin.bredik.cart_service.dto.UserDto;
 
 @Component
 public class AuthClient {
