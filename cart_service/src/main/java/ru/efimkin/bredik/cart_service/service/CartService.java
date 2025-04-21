@@ -2,12 +2,10 @@ package ru.efimkin.bredik.cart_service.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import ru.efimkin.bredik.authservice.service.AuthService;
 import ru.efimkin.bredik.cart_service.client.AuthClient;
 import ru.efimkin.bredik.cart_service.model.CartModel;
 import ru.efimkin.bredik.cart_service.repository.CartRepository;

@@ -1,0 +1,117 @@
+
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    restart: always
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+  eureka-server:
+    build:
+      context: ./eureka-server
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+    restart: on-failure
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - "8082:8082"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8080/eureka
+      - SPRING_APPLICATION_NAME=api-gateway
+    depends_on:
+      - eureka-server
+      - auth-service
+      - cart-service
+      - order-service
+      - product-service
+
+  auth-service:
+    build:
+      context: ./auth-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/authservice_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=1234
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8080/eureka
+      - SPRING_APPLICATION_NAME=auth-service
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop  # авто-создание схемы для Hibernate
+    depends_on:
+      - postgres
+      - eureka-server
+
+  cart-service:
+    build:
+      context: ./cart_service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/cartservice_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=1234
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8080/eureka
+      - SPRING_APPLICATION_NAME=cart-service
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop  # авто-создание схемы для Hibernate
+    depends_on:
+      - postgres
+      - eureka-server
+
+  order-service:
+    build:
+      context: ./order-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/orderservice_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=1234
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8080/eureka
+      - SPRING_APPLICATION_NAME=order-service
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop  # авто-создание схемы для Hibernate
+    depends_on:
+      - postgres
+      - eureka-server
+
+  product-service:
+    build:
+      context: ./product-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/productservice_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=1234
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8080/eureka
+      - SPRING_APPLICATION_NAME=product-service
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop  # авто-создание схемы для Hibernate
+    depends_on:
+      - postgres
+      - eureka-server
+
+volumes:
+  pgdata:
+  pgadmin-data:
