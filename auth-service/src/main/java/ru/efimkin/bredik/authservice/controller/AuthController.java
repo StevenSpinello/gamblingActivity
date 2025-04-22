@@ -1,5 +1,6 @@
 package ru.efimkin.bredik.authservice.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import ru.efimkin.bredik.authservice.service.AuthService;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/auth")
+@Tag(name="Tralala", description = "Tralalelo")
 public class AuthController {
     private final AuthService authService;
 
