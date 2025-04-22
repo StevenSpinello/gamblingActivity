@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - app-network
 
   pgadmin:
     image: dpage/pgadmin4
@@ -30,6 +32,8 @@ services:
     restart: always
     volumes:
       - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - app-network
 
   eureka-server:
     build:
@@ -40,6 +44,8 @@ services:
       - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
       - EUREKA_CLIENT_FETCH_REGISTRY=false
     restart: on-failure
+    networks:
+      - app-network
 
   api-gateway:
     build:
@@ -55,6 +61,8 @@ services:
       - cart-service
       - order-service
       - product-service
+    networks:
+      - app-network
 
   auth-service:
     build:
@@ -69,6 +77,8 @@ services:
     depends_on:
       - postgres
       - eureka-server
+    networks:
+      - app-network
 
   cart-service:
     build:
@@ -83,6 +93,8 @@ services:
     depends_on:
       - postgres
       - eureka-server
+    networks:
+      - app-network
 
   order-service:
     build:
@@ -97,6 +109,8 @@ services:
     depends_on:
       - postgres
       - eureka-server
+    networks:
+      - app-network
 
   product-service:
     build:
@@ -111,7 +125,13 @@ services:
     depends_on:
       - postgres
       - eureka-server
+    networks:
+      - app-network
 
 volumes:
   pgdata:
   pgadmin-data:
+
+networks:
+  app-network:
+    driver: bridge
